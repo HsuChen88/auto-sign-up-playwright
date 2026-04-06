@@ -121,9 +121,9 @@ async def run_automation(page):
         wait_seconds = EIGHT_HOURS + random.randint(0, 60 * 60)  # 8~9 小時
         sign_out_time = sign_in_time + timedelta(seconds=wait_seconds)
         print(f"✅ 簽到：{sign_in_time.strftime('%H:%M:%S')}，預計簽退：{sign_out_time.strftime('%H:%M:%S')}（間隔 {wait_seconds/3600:.2f} 小時）")
+        print(f"😴 等待中... (請不要中斷程式)")
         await asyncio.sleep(wait_seconds)
 
-    print(f"😴 等待中... (請不要中斷程式)")
 
     if await ensure_now_in_target_url(page):
         await page.get_by_role("button", name="更新時間").click()
