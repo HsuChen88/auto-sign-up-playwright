@@ -8,19 +8,17 @@ from playwright.async_api import async_playwright
 TARGET_URL = "https://cis.ncu.edu.tw/HumanSys/student/stdSignIn"
 USER_DATA_DIR = "./user_data"  # 瀏覽器資料夾（持久化）
 EIGHT_HOURS = 8 * 60 * 60  # 8小時
-SIGN_OUT_MESSAGE = "系統分析"
-DAY_OF_WORK = 5  # todo
 work_plan = [
-    "熟悉校務系統架構、開發環境建置、權限確認",
+    "熟悉系統架構、開發環境建置、權限確認",
     "閱讀既有程式碼與文件，釐清主要模組功能",
     "整理需求、規劃未來",
     "盤點舊功能問題與技術債，部份修正",
-    "實做網站雙語化",
-    "分析常用功能流程，優化使用者體驗",
-    "規劃小型功能改進（UI / 流程優化）",
-    "開始實作第一個小功能或優化項目",
+    "實做徵才網雙語化",
+    "實做徵才網雙語化",
+    "實做徵才網雙語化",
     "持續開發與測試，修正回報問題",
-    "研究 AI 導入方向（文件生成 / 問答輔助）",
+    "持續開發與測試，修正回報問題",
+    "執行版本、安全性檢查",
     "設計 AI 工作流程初版",
     "實作簡單 AI prototype",
     "與行政單位測試 AI 工具可行性",
@@ -129,12 +127,19 @@ async def handle_oauth_page(page):
 
 
 # ========= 你的自動流程（貼上錄製的code） =========
-async def run_automation(page):
+async def run_automation(page, work_message):
+
     # 簽到流程
     await ensure_in_target_url(page)
     await page.wait_for_selector("role=link[name='新增簽到']")
     await page.get_by_role("link", name="新增簽到").click()
     await human_delay()
+
+
+    # await 確認簽到簽退狀態
+    # await 簽到流程
+    # await 簽退流程
+    
 
     await page.wait_for_selector("role=button[name='更新時間']")
     await page.get_by_role("button", name="更新時間").click()
@@ -160,8 +165,8 @@ async def run_automation(page):
     await page.locator("#AttendWork").click()
     await human_delay()
     
-    await page.locator("#AttendWork").fill(work_plan[DAY_OF_WORK - 1])
-    print(f"📝 工作內容：{work_plan[DAY_OF_WORK - 1]}")
+    await page.locator("#AttendWork").fill(work_message)
+    print(f"📝 工作內容：{work_message}")
     await human_delay()
 
     await page.wait_for_selector("role=button[name='更新時間']")
@@ -201,6 +206,25 @@ async def main():
             });
         """)
 
+        # 預打工內容，避免簽退時才打字
+        day_of_work = int(input("今天是第幾天上班？請輸入數字後按 Enter："))
+        suggested_work_message = work_plan[day_of_work - 1] if 1 <= day_of_work <= len(work_plan) else ""
+        print(f"建議的工作日誌內容：{suggested_work_message}")
+        while True:
+            use_suggested_answer = input("是否使用建議的工作內容？輸入 y 使用建議內容，輸入其他則自行輸入：").strip().lower()
+            if use_suggested_answer == 'y':
+                # use suggested_work_message, that is work_plan[day_of_work - 1]
+                break
+            elif use_suggested_answer == 'n':
+                custom_message = input("請輸入今天的工作內容：")
+                work_plan[day_of_work - 1] = custom_message
+                break
+            else:
+                print("只接受 y 或 n，重新再試一次")
+                continue
+                
+        work_message = suggested_work_message if use_suggested_answer == 'y' else custom_message
+
         # 等到上午 8:00–9:00 之間的隨機時間才執行第一步
         now = datetime.now()
         target = now.replace(hour=8, minute=0, second=0, microsecond=0) + timedelta(seconds=random.randint(0, 3600))
@@ -215,7 +239,7 @@ async def main():
         print(f"🚀 開始執行自動流程：{datetime.now().strftime('%H:%M:%S')}")
         
         try:
-            await run_automation(page)
+            await run_automation(page, work_message)
             print("👌 自動簽到流程完成 (等待使用者確認後關閉)")
         except Exception as e:
             print("❌ 自動流程錯誤：", e)
