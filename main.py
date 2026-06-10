@@ -50,7 +50,7 @@ async def human_delay(min_ms=500, max_ms=3000):
 
 # ======== 確認已進入人事管理系統 =========
 async def ensure_in_target_url(page):
-    while not page.url.startswith(TARGET_URL):
+    while page.url != TARGET_URL:
         await human_delay(1000, 2000)
         print(f"🔀 目前頁面不是目標頁，切換至 {TARGET_URL}")
         await page.goto(TARGET_URL)
@@ -71,8 +71,14 @@ async def ensure_in_target_url(page):
 
 
     # 確認進入到簽到頁面
-    if page.url.startswith(TARGET_URL):
+    if page.url == TARGET_URL:
         print("➡️ 已進入人事系統頁面")
+        await human_delay()
+
+        await page.wait_for_selector("role=link[name='新增簽到']")
+        await page.get_by_role("link", name="新增簽到").click()
+        print("➡️ 已進入簽到頁面")
+        await human_delay()
     else:
         raise Exception("應該要在簽到頁面，但目前頁面 TARGET_URL 是：" + page.url)
 
@@ -144,15 +150,7 @@ async def run_automation(page, work_message):
 
     # 簽到流程
     await ensure_in_target_url(page)
-    await page.wait_for_selector("role=link[name='新增簽到']")
-    await page.get_by_role("link", name="新增簽到").click()
     await human_delay()
-
-
-    # await 確認簽到簽退狀態
-    # await 簽到流程
-    # await 簽退流程
-    
 
     await page.wait_for_selector("role=button[name='更新時間']")
     await page.get_by_role("button", name="更新時間").click()
