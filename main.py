@@ -39,24 +39,9 @@ EXECUTION_DATES = {
 work_plan = [
     "熟悉系統架構、開發環境建置、權限確認",
     "閱讀既有程式碼與文件，釐清主要模組功能",
-    "整理需求、規劃未來",
-    "盤點舊功能問題與技術債，部份修正",
-    "實做徵才網雙語化",
-    "實做徵才網雙語化",
-    "實做徵才網雙語化",
-    "持續開發與測試，修正回報問題",
-    "持續開發與測試，修正回報問題",
-    "執行版本、安全性檢查",
-    "設計 AI 工作流程初版",
-    "實作簡單 AI prototype",
-    "與行政單位測試 AI 工具可行性",
-    "優化 AI 流程與回應品質",
-    "整理內部文件（操作說明 / API / 流程）",
-    "持續維護舊功能與修復問題",
-    "規劃第二階段優化（效能 / UX）",
-    "提供行政人員技術支援與使用教學",
-    "整合 AI 工具至實際系統或工作流程",
-    "回顧與整理成果，規劃後續開發方向"
+    "實做徵才網雙語化，持續開發與測試，修正回報問題",
+    "為秋季國際生活動擴充功能、修復bug",
+    "整合 AI 工具至實際系統或工作流程"
 ]
 # ========= 模擬人類延遲 =========
 async def human_delay(min_ms=500, max_ms=3000):
@@ -242,23 +227,27 @@ async def main():
         """)
 
         # 預打工內容，避免簽退時才打字
-        day_of_work = int(input("今天是第幾天上班？請輸入數字後按 Enter："))
-        suggested_work_message = work_plan[day_of_work - 1] if 1 <= day_of_work <= len(work_plan) else ""
-        print(f"建議的工作日誌內容：{suggested_work_message}")
+        custom_option_number = len(work_plan)
         while True:
-            use_suggested_answer = input("是否使用建議的工作內容？輸入 y 使用建議內容，輸入其他則自行輸入：").strip().lower()
-            if use_suggested_answer == 'y':
-                # use suggested_work_message, that is work_plan[day_of_work - 1]
-                break
-            elif use_suggested_answer == 'n':
-                custom_message = input("請輸入今天的工作內容：")
-                work_plan[day_of_work - 1] = custom_message
+            print("請選擇今天的工作內容：")
+            for index, plan in enumerate(work_plan):
+                print(f"{index}. {plan}")
+            print(f"{custom_option_number}. 上述無符合選項，自訂輸入工作內容")
+
+            selected_plan = input("請輸入編號後按 Enter：").strip()
+            if selected_plan.isdigit():
+                selected_index = int(selected_plan)
+                if 0 <= selected_index < len(work_plan):
+                    work_message = work_plan[selected_index]
+                    break
+                elif selected_index == custom_option_number:
+                    work_message = input("請輸入今天的工作內容：")
                 break
             else:
-                print("只接受 y 或 n，重新再試一次")
+                print("請輸入上述列表中的數字編號，重新再試一次")
                 continue
-                
-        work_message = suggested_work_message if use_suggested_answer == 'y' else custom_message
+
+        print(f"工作日誌內容：{work_message}")
 
         # 等到上午 8:00–9:00 之間的隨機時間才執行第一步
         now = datetime.now()
