@@ -200,7 +200,7 @@ async def main():
         print(f"🔕 今日日期 {today} 不在上班日期中，略過所有自動流程。")
         return
 
-    print(f"📅 今日日期 {today} 在上班日期中，開始準備自動流程。")
+    print(f"📅 今日是 {today} 上班日，開始準備自動流程。")
 
     async with async_playwright() as p:
         context = await p.chromium.launch_persistent_context(
