@@ -11,37 +11,49 @@ USER_DATA_DIR = "./user_data"  # 瀏覽器資料夾（持久化）
 EIGHT_HOURS = 8 * 60 * 60  # 8小時
 TAIPEI_TZ = ZoneInfo("Asia/Taipei")
 # 上班日期，格式：YYYY-MM-DD。今日日期不在此清單時，程式會直接略過後續流程。
-EXECUTION_DATES = {
-    "2026-04-06",
-    "2026-04-07",
-    "2026-04-08",
-    "2026-04-09",
-    "2026-04-10",
+EXECUTION_DATES = [
+    {   # 2026 年的上班日期
+        "2026-04-06",
+        "2026-04-07",
+        "2026-04-08",
+        "2026-04-09",
+        "2026-04-10",
 
-    "2026-05-04",
-    "2026-05-05",
-    "2026-05-06",
-    "2026-05-07",
-    "2026-05-08",
+        "2026-05-04",
+        "2026-05-05",
+        "2026-05-06",
+        "2026-05-07",
+        "2026-05-08",
 
-    "2026-06-08",
-    "2026-06-09",
-    "2026-06-10",
-    "2026-06-11",
-    "2026-06-12",
-    
-    "2026-07-06",
-    "2026-07-07",
-    "2026-07-08",
-    "2026-07-09",
-    "2026-07-10",
-}
+        "2026-06-08",
+        "2026-06-09",
+        "2026-06-10",
+        "2026-06-11",
+        "2026-06-12",
+
+        "2026-07-06",
+        "2026-07-07",
+        "2026-07-08",
+        "2026-07-09",
+        "2026-07-10",
+    },
+    {   # 2027 年的上班日期
+
+    }
+]
 work_plan = [
-    "熟悉系統架構、開發環境建置、權限確認",
-    "閱讀既有程式碼與文件，釐清主要模組功能",
-    "實做徵才網雙語化，持續開發與測試，修正回報問題",
-    "為秋季國際生活動擴充功能、修復bug",
-    "整合 AI 工具至實際系統或工作流程"
+    [   # 2026 年每月的工作內容
+        "", "",
+        "熟悉系統架構、開發環境建置、權限確認",          # 3月
+        "閱讀既有程式碼與文件，釐清主要模組功能",        # 4月
+        "實做徵才網雙語化，持續開發與測試，修正回報問題", # 5月
+        "為秋季國際生活動擴充功能、修復bug",            # 6月
+        "部署架構、備份流程優化，建立統一管理介面",       # 7月
+        "整合 AI 工具至實際系統或工作流程"              # 8月
+    ], 
+    [   # 2027 年每月的工作內容
+
+    ]
 ]
 # ========= 模擬人類延遲 =========
 async def human_delay(min_ms=500, max_ms=3000):
@@ -154,12 +166,12 @@ async def run_automation(page, work_message):
 
     await page.wait_for_selector("role=button[name='更新時間']")
     await page.get_by_role("button", name="更新時間").click()
-    print(f"🕐 更新時間：{datetime.now().strftime('%H:%M:%S')}")
+    print(f"🕐 更新時間：{datetime.now(TAIPEI_TZ).strftime('%H:%M:%S')}")
     await human_delay()
     
     await page.wait_for_selector("role=button[name='簽到']")
     await page.get_by_role("button", name="簽到").click()
-    sign_in_time = datetime.now()
+    sign_in_time = datetime.now(TAIPEI_TZ)
     print(f"✅ 簽到：{sign_in_time.strftime('%H:%M:%S')}")
     await human_delay()
 
@@ -182,12 +194,12 @@ async def run_automation(page, work_message):
 
     await page.wait_for_selector("role=button[name='更新時間']")
     await page.get_by_role("button", name="更新時間").click()
-    print(f"🕐 更新時間：{datetime.now().strftime('%H:%M:%S')}")
+    print(f"🕐 更新時間：{datetime.now(TAIPEI_TZ).strftime('%H:%M:%S')}")
     await human_delay()
     
     await page.wait_for_selector("role=button[name='簽退']")
     await page.get_by_role("button", name="簽退").click()
-    sign_out_time = datetime.now()
+    sign_out_time = datetime.now(TAIPEI_TZ)
     print(f"✅ 簽退：{sign_out_time.strftime('%H:%M:%S')}")
     await human_delay(3000, 5000)
 
@@ -196,11 +208,29 @@ async def run_automation(page, work_message):
 # ========= 主流程 =========
 async def main():
     today = datetime.now(TAIPEI_TZ).date().isoformat()
-    if today not in EXECUTION_DATES:
+    if today not in EXECUTION_DATES[datetime.now(TAIPEI_TZ).date().year - 2026]:
         print(f"🔕 今日日期 {today} 不在上班日期中，略過所有自動流程。")
         return
 
     print(f"📅 今日是 {today} 上班日，開始準備自動流程。")
+
+
+    # 自動選擇工作內容，每週對應一個工作內容 (同一月共用同一個工作內容)
+    now = datetime.now(TAIPEI_TZ)
+    work_message = work_plan[now.year - 2026][now.month - 1]
+    print(f"📝 工作日誌內容：{work_message}")
+
+
+    # 等到上午 8:00–9:00 之間的隨機時間才執行第一步
+    target = now.replace(hour=8, minute=0, second=0, microsecond=0) + timedelta(seconds=random.randint(0, 3600))
+    if now >= target:
+        # 今天的時間窗口已過，等到明天
+        target += timedelta(days=1)
+
+    wait_seconds = (target - now).total_seconds()
+    print(f"⏰ 目前時間：{now.strftime('%H:%M:%S')}，將於 {target.strftime('%m/%d %H:%M:%S')} 開始執行（等待 {wait_seconds/3600:.1f} 小時）")
+    # await asyncio.sleep(wait_seconds)
+    
 
     async with async_playwright() as p:
         context = await p.chromium.launch_persistent_context(
@@ -224,41 +254,29 @@ async def main():
             });
         """)
 
-        # 預打工內容，避免簽退時才打字
-        custom_option_number = len(work_plan)
-        while True:
-            print("請選擇今天的工作內容：")
-            for index, plan in enumerate(work_plan):
-                print(f"{index}. {plan}")
-            print(f"{custom_option_number}. 上述無符合選項，自訂輸入工作內容")
+        # # 人工預先選擇工作內容，避免簽退時才打字
+        # custom_option_number = len(work_plan)
+        # while True:
+        #     print("請選擇今天的工作內容：")
+        #     for index, plan in enumerate(work_plan):
+        #         print(f"{index}. {plan}")
+        #     print(f"{custom_option_number}. 上述無符合選項，自訂輸入工作內容")
 
-            selected_plan = input("請輸入編號後按 Enter：").strip()
-            if selected_plan.isdigit():
-                selected_index = int(selected_plan)
-                if 0 <= selected_index < len(work_plan):
-                    work_message = work_plan[selected_index]
-                    break
-                elif selected_index == custom_option_number:
-                    work_message = input("請輸入今天的工作內容：")
-                break
-            else:
-                print("請輸入上述列表中的數字編號，重新再試一次")
-                continue
+        #     selected_plan = input("請輸入編號後按 Enter：").strip()
+        #     if selected_plan.isdigit():
+        #         selected_index = int(selected_plan)
+        #         if 0 <= selected_index < len(work_plan):
+        #             work_message = work_plan[selected_index]
+        #             break
+        #         elif selected_index == custom_option_number:
+        #             work_message = input("請輸入今天的工作內容：")
+        #         break
+        #     else:
+        #         print("請輸入上述列表中的數字編號，重新再試一次")
+        #         continue
 
-        print(f"工作日誌內容：{work_message}")
 
-        # 等到上午 8:00–9:00 之間的隨機時間才執行第一步
-        now = datetime.now()
-        target = now.replace(hour=8, minute=0, second=0, microsecond=0) + timedelta(seconds=random.randint(0, 3600))
-        if now >= target:
-            # 今天的時間窗口已過，等到明天
-            target += timedelta(days=1)
-
-        wait_seconds = (target - now).total_seconds()
-        print(f"⏰ 目前時間：{now.strftime('%H:%M:%S')}，將於 {target.strftime('%m/%d %H:%M:%S')} 開始執行（等待 {wait_seconds/3600:.1f} 小時）")
-        await asyncio.sleep(wait_seconds)
-
-        print(f"🚀 開始執行自動流程：{datetime.now().strftime('%H:%M:%S')}")
+        print(f"🚀 開始執行自動流程：{datetime.now(TAIPEI_TZ).strftime('%H:%M:%S')}")
         
         try:
             await run_automation(page, work_message)
@@ -267,7 +285,7 @@ async def main():
             print("❌ 自動流程錯誤：", e)
 
         
-        input("按下 Enter 鍵結束程式...")
+        # input("按下 Enter 鍵結束程式...")
 
 if __name__ == "__main__":
     asyncio.run(main())
