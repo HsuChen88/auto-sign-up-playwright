@@ -1,6 +1,7 @@
 import asyncio
 import random
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 from playwright.async_api import async_playwright
 
 # ========= 可調整參數 =========
@@ -8,6 +9,33 @@ from playwright.async_api import async_playwright
 TARGET_URL = "https://cis.ncu.edu.tw/HumanSys/student/stdSignIn"
 USER_DATA_DIR = "./user_data"  # 瀏覽器資料夾（持久化）
 EIGHT_HOURS = 8 * 60 * 60  # 8小時
+TAIPEI_TZ = ZoneInfo("Asia/Taipei")
+# 上班日期，格式：YYYY-MM-DD。今日日期不在此清單時，程式會直接略過後續流程。
+EXECUTION_DATES = {
+    "2026-04-06",
+    "2026-04-07",
+    "2026-04-08",
+    "2026-04-09",
+    "2026-04-10",
+
+    "2026-05-04",
+    "2026-05-05",
+    "2026-05-06",
+    "2026-05-07",
+    "2026-05-08",
+
+    "2026-06-08",
+    "2026-06-09",
+    "2026-06-10",
+    "2026-06-11",
+    "2026-06-12",
+    
+    "2026-07-06",
+    "2026-07-07",
+    "2026-07-08",
+    "2026-07-09",
+    "2026-07-10",
+}
 work_plan = [
     "熟悉系統架構、開發環境建置、權限確認",
     "閱讀既有程式碼與文件，釐清主要模組功能",
@@ -184,6 +212,13 @@ async def run_automation(page, work_message):
 
 # ========= 主流程 =========
 async def main():
+    today = datetime.now(TAIPEI_TZ).date().isoformat()
+    if today not in EXECUTION_DATES:
+        print(f"🔕 今日日期 {today} 不在上班日期中，略過所有自動流程。")
+        return
+
+    print(f"📅 今日日期 {today} 在上班日期中，開始準備自動流程。")
+
     async with async_playwright() as p:
         context = await p.chromium.launch_persistent_context(
             USER_DATA_DIR,
