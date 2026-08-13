@@ -1,60 +1,112 @@
 import asyncio
 import random
-from datetime import datetime, timedelta
+from dataclasses import dataclass
+from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 from playwright.async_api import async_playwright
 
 # ========= 可調整參數 =========
-# 要改 EIGHT_HOURS 和 DAEIGHT_HOURSY_OF_WORK ###########################################
 TARGET_URL = "https://cis.ncu.edu.tw/HumanSys/student/stdSignIn"
 USER_DATA_DIR = "./user_data"  # 瀏覽器資料夾（持久化）
-EIGHT_HOURS = 8 * 60 * 60  # 8小時
 TAIPEI_TZ = ZoneInfo("Asia/Taipei")
-# 上班日期，格式：YYYY-MM-DD。今日日期不在此清單時，程式會直接略過後續流程。
-EXECUTION_DATES = [
-    {   # 2026 年的上班日期
-        "2026-04-06",
-        "2026-04-07",
-        "2026-04-08",
-        "2026-04-09",
-        "2026-04-10",
+SECONDS_PER_HOUR = 60 * 60
+SIGN_OUT_JITTER_SECONDS = 30 * 60
 
-        "2026-05-04",
-        "2026-05-05",
-        "2026-05-06",
-        "2026-05-07",
-        "2026-05-08",
 
-        "2026-06-08",
-        "2026-06-09",
-        "2026-06-10",
-        "2026-06-11",
-        "2026-06-12",
+@dataclass(frozen=True)
+class WorkPeriod:
+    year: int
+    month: int
+    start_day: int
+    end_day: int
+    goal: str
+    hours: int
 
-        "2026-07-06",
-        "2026-07-07",
-        "2026-07-08",
-        "2026-07-09",
-        "2026-07-10",
-    },
-    {   # 2027 年的上班日期
+    @property
+    def start_date(self) -> date:
+        return date(self.year, self.month, self.start_day)
 
-    }
-]
-work_plan = [
-    [   # 2026 年每月的工作內容
-        "", "",
-        "熟悉系統架構、開發環境建置、權限確認",          # 3月
-        "閱讀既有程式碼與文件，釐清主要模組功能",        # 4月
-        "實做徵才網雙語化，持續開發與測試，修正回報問題", # 5月
-        "為秋季國際生活動擴充功能、修復bug",            # 6月
-        "部署架構、備份流程優化，建立統一管理介面",       # 7月
-        "整合 AI 工具至實際系統或工作流程"              # 8月
-    ], 
-    [   # 2027 年每月的工作內容
+    @property
+    def end_date(self) -> date:
+        return date(self.year, self.month, self.end_day)
 
-    ]
-]
+    @property
+    def seconds(self) -> int:
+        return self.hours * SECONDS_PER_HOUR
+
+    @property
+    def label(self) -> str:
+        return f"{self.start_date:%Y-%m-%d} ~ {self.end_date:%Y-%m-%d}"
+
+    def includes(self, day: date) -> bool:
+        return self.start_date <= day <= self.end_date
+
+    def iter_dates(self):
+        current = self.start_date
+        while current <= self.end_date:
+            yield current
+            current += timedelta(days=1)
+
+
+class WorkSchedule:
+    def __init__(self, periods):
+        self.periods = tuple(periods)
+        self._validate()
+
+    def find(self, day: date) -> WorkPeriod | None:
+        return next((period for period in self.periods if period.includes(day)), None)
+
+    def _validate(self):
+        occupied_dates = {}
+        for period in self.periods:
+            if period.start_date > period.end_date:
+                raise ValueError(f"工作期間起訖日期錯誤：{period.label}")
+            if not period.goal.strip():
+                raise ValueError(f"工作期間缺少工作目標：{period.label}")
+            if not isinstance(period.hours, int) or period.hours <= 0:
+                raise ValueError(f"每日工作時數需為正整數：{period.label}")
+
+            for work_date in period.iter_dates():
+                if work_date in occupied_dates:
+                    previous = occupied_dates[work_date]
+                    raise ValueError(
+                        f"工作期間日期重疊：{work_date.isoformat()} "
+                        f"同時存在於 {previous.label} 與 {period.label}"
+                    )
+                occupied_dates[work_date] = period
+
+
+def work_period(year, month, start_day, end_day, goal, hours=8) -> WorkPeriod:
+    return WorkPeriod(
+        year=year,
+        month=month,
+        start_day=start_day,
+        end_day=end_day,
+        goal=goal,
+        hours=hours,
+    )
+
+
+# 每個工作期間都有自己的工作目標與每日時數；同一期間內每日時數相同。
+WORK_SCHEDULE = WorkSchedule([
+    # 2026 年
+    work_period(2026, 4, 6, 10, "閱讀既有程式碼與文件，釐清主要模組功能", hours=8),
+    work_period(2026, 5, 4, 8, "實做徵才網雙語化，持續開發與測試，修正回報問題", hours=8),
+    work_period(2026, 6, 8, 12, "為秋季國際生活動擴充功能、修復bug", hours=8),
+    work_period(2026, 7, 6, 10, "部署架構、備份流程優化，建立統一管理介面", hours=8),
+    work_period(2026, 8, 19, 21, "支援秋季國際生活動、協助解決問題", hours=8),
+    work_period(2026, 8, 24, 28, "重構 Docker 部署、更新依賴套件", hours=8),
+    work_period(2026, 9, 7, 11, "重構 Docker 部署、更新依賴套件", hours=8),
+    work_period(2026, 9, 14, 17, "例行檢查並提升系統安全性", hours=8),
+    work_period(2026, 10, 5, 9, "待補：十月第一組工作內容", hours=8),
+    work_period(2026, 10, 12, 15, "待補：十月第二組工作內容", hours=8),
+    work_period(2026, 11, 2, 6, "待補：十一月第一組工作內容", hours=8),
+    work_period(2026, 11, 9, 12, "待補：十一月第二組工作內容", hours=8),
+    work_period(2026, 12, 7, 11, "待補：十二月第一組工作內容", hours=8),
+    work_period(2026, 12, 14, 17, "待補：十二月第二組工作內容", hours=8),
+
+    # 2027 年工作期間可接續新增在這裡。
+])
 # ========= 模擬人類延遲 =========
 async def human_delay(min_ms=500, max_ms=3000):
     delay = random.uniform(min_ms, max_ms) / 1000
@@ -133,7 +185,7 @@ async def handle_log_in(page):
 async def handle_timeout_page(page):
     back_to_system_btn = page.get_by_role("button", name="回到系統")
     back_to_system_btn_exists = await back_to_system_btn.count() > 0
-    if await back_to_system_btn_exists:
+    if back_to_system_btn_exists:
         await human_delay()
         print("🖱️ 嘗試按下「回到系統」")
         await back_to_system_btn.click()
@@ -158,7 +210,8 @@ async def handle_oauth_page(page):
 
 
 # ========= 你的自動流程（貼上錄製的code） =========
-async def run_automation(page, work_message):
+async def run_automation(page, work_period):
+    work_message = work_period.goal
 
     # 簽到流程
     await ensure_in_target_url(page)
@@ -175,7 +228,7 @@ async def run_automation(page, work_message):
     print(f"✅ 簽到：{sign_in_time.strftime('%H:%M:%S')}")
     await human_delay()
 
-    wait_seconds = EIGHT_HOURS + random.randint(0, 30 * 60)  # 8~8.5 小時
+    wait_seconds = work_period.seconds + random.randint(0, SIGN_OUT_JITTER_SECONDS)
     sign_out_time = sign_in_time + timedelta(seconds=wait_seconds)
     print(f"⏰預計簽退：{sign_out_time.strftime('%H:%M:%S')}（間隔 {wait_seconds/3600:.2f} 小時）")
     await asyncio.sleep(wait_seconds)
@@ -207,18 +260,17 @@ async def run_automation(page, work_message):
 
 # ========= 主流程 =========
 async def main():
-    today = datetime.now(TAIPEI_TZ).date().isoformat()
-    if today not in EXECUTION_DATES[datetime.now(TAIPEI_TZ).date().year - 2026]:
-        print(f"🔕 今日日期 {today} 不在上班日期中，略過所有自動流程。")
+    now = datetime.now(TAIPEI_TZ)
+    today = now.date()
+    work_period = WORK_SCHEDULE.find(today)
+    if work_period is None:
+        print(f"🔕 今日日期 {today.isoformat()} 不在上班日期中，略過所有自動流程。")
         return
 
-    print(f"📅 今日是 {today} 上班日，開始準備自動流程。")
-
-
-    # 自動選擇工作內容，每週對應一個工作內容 (同一月共用同一個工作內容)
-    now = datetime.now(TAIPEI_TZ)
-    work_message = work_plan[now.year - 2026][now.month - 1]
-    print(f"📝 工作日誌內容：{work_message}")
+    print(f"📅 今日是 {today.isoformat()} 上班日，開始準備自動流程。")
+    print(f"🗓️ 工作期間：{work_period.label}")
+    print(f"⏳ 今日工作時數：{work_period.hours} 小時")
+    print(f"📝 工作日誌內容：{work_period.goal}")
 
 
     # 等到上午 8:00–9:00 之間的隨機時間才執行第一步
@@ -254,32 +306,10 @@ async def main():
             });
         """)
 
-        # # 人工預先選擇工作內容，避免簽退時才打字
-        # custom_option_number = len(work_plan)
-        # while True:
-        #     print("請選擇今天的工作內容：")
-        #     for index, plan in enumerate(work_plan):
-        #         print(f"{index}. {plan}")
-        #     print(f"{custom_option_number}. 上述無符合選項，自訂輸入工作內容")
-
-        #     selected_plan = input("請輸入編號後按 Enter：").strip()
-        #     if selected_plan.isdigit():
-        #         selected_index = int(selected_plan)
-        #         if 0 <= selected_index < len(work_plan):
-        #             work_message = work_plan[selected_index]
-        #             break
-        #         elif selected_index == custom_option_number:
-        #             work_message = input("請輸入今天的工作內容：")
-        #         break
-        #     else:
-        #         print("請輸入上述列表中的數字編號，重新再試一次")
-        #         continue
-
-
         print(f"🚀 開始執行自動流程：{datetime.now(TAIPEI_TZ).strftime('%H:%M:%S')}")
         
         try:
-            await run_automation(page, work_message)
+            await run_automation(page, work_period)
             print("👌 自動簽到流程完成 (等待使用者確認後關閉)")
         except Exception as e:
             print("❌ 自動流程錯誤：", e)
