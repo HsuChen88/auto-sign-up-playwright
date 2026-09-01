@@ -281,7 +281,7 @@ async def main():
 
     wait_seconds = (target - now).total_seconds()
     print(f"⏰ 目前時間：{now.strftime('%H:%M:%S')}，將於 {target.strftime('%m/%d %H:%M:%S')} 開始執行（等待 {wait_seconds/3600:.1f} 小時）")
-    # await asyncio.sleep(wait_seconds)
+    await asyncio.sleep(wait_seconds)
     
 
     async with async_playwright() as p:
