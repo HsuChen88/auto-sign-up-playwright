@@ -24,4 +24,5 @@ wheels/
 
 user_data/
 
-logs/
+logs/*
+!logs/.gitkeep
