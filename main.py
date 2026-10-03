@@ -98,12 +98,12 @@ WORK_SCHEDULE = WorkSchedule([
     work_period(2026, 8, 24, 28, "重構 Docker 部署、更新依賴套件", hours=8),
     work_period(2026, 9, 7, 11, "重構 Docker 部署、更新依賴套件", hours=8),
     work_period(2026, 9, 14, 17, "例行檢查並提升系統安全性", hours=5),
-    work_period(2026, 10, 5, 9, "待補：十月第一組工作內容", hours=8),
-    work_period(2026, 10, 12, 15, "待補：十月第二組工作內容", hours=5),
-    work_period(2026, 11, 2, 6, "待補：十一月第一組工作內容", hours=8),
-    work_period(2026, 11, 9, 12, "待補：十一月第二組工作內容", hours=5),
-    work_period(2026, 12, 7, 11, "待補：十二月第一組工作內容", hours=8),
-    work_period(2026, 12, 14, 17, "待補：十二月第二組工作內容", hours=5),
+    work_period(2026, 10, 5, 9, "規劃多環境系統管理", hours=8),
+    work_period(2026, 10, 12, 15, "支援春季活動報名", hours=5),
+    work_period(2026, 11, 2, 6, "例行檢查並提升系統安全性", hours=8),
+    work_period(2026, 11, 9, 12, "例行檢查並提升系統安全性", hours=5),
+    work_period(2026, 12, 7, 11, "規劃新校園徵才網", hours=8),
+    work_period(2026, 12, 14, 17, "規劃新校園徵才網", hours=5),
 
     # 2027 年工作期間可接續新增在這裡。
 ])
