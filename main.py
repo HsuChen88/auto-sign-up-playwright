@@ -11,6 +11,12 @@ USER_DATA_DIR = "./user_data"  # 瀏覽器資料夾（持久化）
 TAIPEI_TZ = ZoneInfo("Asia/Taipei")
 SECONDS_PER_HOUR = 60 * 60
 SIGN_OUT_JITTER_SECONDS = 30 * 60
+# 簽到頁若有多個計畫，用以下關鍵字定位要簽到的那一列（需同時包含所有關鍵字）
+SIGN_IN_PLAN_KEYWORDS = (
+    "境外學生學習、生活支援及職涯輔導",
+    "1150819 ~ 1151217",
+    "勞僱型-工讀生",
+)
 
 
 @dataclass(frozen=True)
@@ -139,13 +145,25 @@ async def ensure_in_target_url(page):
         print("➡️ 已進入人事系統頁面")
         await human_delay()
 
-        await page.wait_for_selector("role=link[name='新增簽到']")
-        await page.get_by_role("link", name="新增簽到").click()
+        await click_plan_sign_in_link(page)
         print("➡️ 已進入簽到頁面")
         await human_delay()
     else:
         raise Exception("應該要在簽到頁面，但目前頁面 TARGET_URL 是：" + page.url)
 
+
+async def click_plan_sign_in_link(page):
+    # 頁面上可能有多個計畫，各自有一個「新增簽到」，先鎖定目標計畫所在的列
+    rows = page.locator("#table1 tr").filter(has=page.get_by_role("link", name="新增簽到"))
+    await rows.first.wait_for()
+    for keyword in SIGN_IN_PLAN_KEYWORDS:
+        rows = rows.filter(has_text=keyword)
+
+    row_count = await rows.count()
+    if row_count != 1:
+        raise Exception(f"找到 {row_count} 個符合 {SIGN_IN_PLAN_KEYWORDS} 的計畫列，預期剛好 1 個")
+
+    await rows.get_by_role("link", name="新增簽到").click()
 
 
 async def handle_log_in(page):
